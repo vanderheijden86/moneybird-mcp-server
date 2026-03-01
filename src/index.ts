@@ -7,12 +7,8 @@ import {
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MoneybirdClient } from './services/moneybird.js';
 import dotenv from 'dotenv';
-import { z } from 'zod';
 import { isMoneybirdError, MoneybirdRateLimitError } from './common/errors.js';
 import { VERSION } from './common/version.js';
-import { listContacts } from './operations/contacts.js';
-import type { MoneybirdContact } from './operations/contacts.js';
-import type { MoneybirdInvoice } from './operations/invoices.js';
 
 dotenv.config();
 
@@ -29,8 +25,29 @@ const moneybirdClient = new MoneybirdClient(
   process.env.MONEYBIRD_ADMINISTRATION_ID!
 );
 
-const ENTITY_TYPES = ['contacts', 'sales_invoices', 'financial_accounts', 'products', 'projects', 'time_entries'] as const;
-type EntityType = typeof ENTITY_TYPES[number];
+// Entity types and their API paths
+const LIST_ENTITIES: Record<string, { path: string; supportsPagination: boolean }> = {
+  contacts:                  { path: 'contacts',                  supportsPagination: true },
+  sales_invoices:            { path: 'sales_invoices',            supportsPagination: true },
+  estimates:                 { path: 'estimates',                 supportsPagination: true },
+  recurring_sales_invoices:  { path: 'recurring_sales_invoices',  supportsPagination: true },
+  products:                  { path: 'products',                  supportsPagination: true },
+  projects:                  { path: 'projects',                  supportsPagination: true },
+  time_entries:              { path: 'time_entries',              supportsPagination: true },
+  financial_accounts:        { path: 'financial_accounts',        supportsPagination: false },
+  ledger_accounts:           { path: 'ledger_accounts',           supportsPagination: false },
+};
+
+const GET_ENTITIES: Record<string, string> = {
+  contact:                  'contacts',
+  sales_invoice:            'sales_invoices',
+  estimate:                 'estimates',
+  recurring_sales_invoice:  'recurring_sales_invoices',
+  product:                  'products',
+  project:                  'projects',
+  time_entry:               'time_entries',
+  ledger_account:           'ledger_accounts',
+};
 
 const server = new Server({
   name: 'moneybird-mcp-server',
@@ -60,19 +77,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "moneybird_list",
-        description: "List entities from Moneybird. Supports: contacts, sales_invoices, financial_accounts, products, projects, time_entries.",
+        description: "List entities from Moneybird. Entities: contacts, sales_invoices, estimates, recurring_sales_invoices, products, projects, time_entries, financial_accounts, ledger_accounts. Use filter for server-side filtering (e.g. state:open, period:this_month, contact_id:123).",
         inputSchema: {
           type: "object",
           properties: {
             entity: {
               type: "string",
-              enum: ENTITY_TYPES,
+              enum: Object.keys(LIST_ENTITIES),
               description: "Entity type to list"
             },
             page: { type: "number", description: "Page number" },
             per_page: { type: "number", description: "Items per page" },
-            query: { type: "string", description: "Search term (contacts only)" },
-            filter: { type: "string", description: "Filter as property:value (contacts only)" },
+            query: { type: "string", description: "Search term (contacts, products, time_entries)" },
+            filter: { type: "string", description: "Server-side filter as property:value (e.g. state:open, period:this_month)" },
           },
           required: ["entity"],
         }
@@ -85,7 +102,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             entity: {
               type: "string",
-              enum: ["contact", "sales_invoice"],
+              enum: Object.keys(GET_ENTITIES),
               description: "Entity type"
             },
             id: { type: "string", description: "Entity ID" },
@@ -104,7 +121,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               enum: ["get", "post", "put", "delete"],
               description: "HTTP method"
             },
-            path: { type: "string", description: "API path (e.g. contacts, sales_invoices, ledger_accounts)" },
+            path: { type: "string", description: "API path (e.g. contacts, sales_invoices/{id}/send_invoice)" },
             data: { description: "Request body for POST/PUT" }
           },
           required: ["method", "path"],
@@ -121,71 +138,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "moneybird_list": {
         const { entity, page, per_page, query, filter } = args as {
-          entity: EntityType;
+          entity: string;
           page?: number;
           per_page?: number;
           query?: string;
           filter?: string;
         };
 
-        if (entity === 'contacts') {
-          const result = await listContacts({
-            page,
-            perPage: per_page,
-            query,
-            filter,
-          });
-          const contacts = result.contacts;
-          const formatted = contacts.map((c: MoneybirdContact) => ({
-            id: c.id,
-            company_name: c.company_name,
-            firstname: c.firstname,
-            lastname: c.lastname,
-            email: c.email,
-            phone: c.phone
-          }));
-          return { content: [{ type: "text", text: JSON.stringify(formatted, null, 2) }] };
-        }
-
-        if (entity === 'sales_invoices') {
-          const invoices = await moneybirdClient.getSalesInvoices();
-          const formatted = invoices.map((inv: MoneybirdInvoice) => ({
-            id: inv.id,
-            invoice_id: inv.invoice_id,
-            contact_id: inv.contact_id,
-            reference: inv.reference,
-            state: inv.state,
-            date: inv.date,
-            due_date: inv.due_date,
-            total_price_incl_tax: inv.total_price_incl_tax,
-            currency: inv.currency,
-            paid_at: inv.paid_at
-          }));
-          return { content: [{ type: "text", text: JSON.stringify(formatted, null, 2) }] };
-        }
-
-        // Generic list for other entity types
-        const entityPathMap: Record<string, string> = {
-          financial_accounts: 'financial_accounts',
-          products: 'products',
-          projects: 'projects',
-          time_entries: 'time_entries',
-        };
-        const path = entityPathMap[entity];
-        if (!path) {
+        const entityConfig = LIST_ENTITIES[entity];
+        if (!entityConfig) {
           return { content: [{ type: "text", text: `Unknown entity: ${entity}` }], isError: true };
         }
+
+        // Build query parameters based on what the API supports
+        const params: Record<string, string> = {};
+        if (entityConfig.supportsPagination) {
+          if (page) params.page = String(page);
+          if (per_page) params.per_page = String(per_page);
+        }
+        if (filter) params.filter = filter;
+        if (query) params.query = query;
+
+        const queryString = new URLSearchParams(params).toString();
+        const path = queryString ? `${entityConfig.path}?${queryString}` : entityConfig.path;
+
         const data = await moneybirdClient.request('get', path);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "moneybird_get": {
         const { entity, id } = args as { entity: string; id: string };
-        const pathMap: Record<string, string> = {
-          contact: 'contacts',
-          sales_invoice: 'sales_invoices',
-        };
-        const basePath = pathMap[entity];
+        const basePath = GET_ENTITIES[entity];
         if (!basePath) {
           return { content: [{ type: "text", text: `Unknown entity: ${entity}` }], isError: true };
         }
