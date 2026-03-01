@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server that connects AI assistants like Claude to Moneybird accounting software via API.
 
+<a href="https://glama.ai/mcp/servers/@vanderheijden86/moneybird-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@vanderheijden86/moneybird-mcp-server/badge" alt="Moneybird Server MCP server" />
+</a>
+
 ## Features
 
 - **Contact Management**: List, retrieve, filter, create, and update contacts
