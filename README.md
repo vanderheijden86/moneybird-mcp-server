@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vanderheijden86-moneybird-mcp-server-badge.png)](https://mseep.ai/app/vanderheijden86-moneybird-mcp-server)
+
 # Moneybird MCP Server
 
 A Model Context Protocol (MCP) server that connects AI assistants like Claude to Moneybird accounting software via API.
