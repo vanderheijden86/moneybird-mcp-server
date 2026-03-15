@@ -1,0 +1,81 @@
+{
+  "manifest_version": "0.3",
+  "name": "moneybird-mcp-server",
+  "display_name": "Moneybird Accounting",
+  "version": "0.8.0",
+  "description": "Connect Claude to Moneybird accounting software. List contacts, invoices, products, projects, time entries, and make custom API requests.",
+  "long_description": "A Model Context Protocol server that connects AI assistants to Moneybird accounting software via API. Manage contacts, sales invoices, estimates, recurring invoices, products, projects, time entries, financial accounts, and ledger accounts. Supports server-side filtering, pagination, and custom API requests to any Moneybird endpoint.",
+  "author": {
+    "name": "vanderheijden86",
+    "email": "vanderheijden86@gmail.com",
+    "url": "https://github.com/vanderheijden86"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vanderheijden86/moneybird-mcp-server.git"
+  },
+  "homepage": "https://github.com/vanderheijden86/moneybird-mcp-server",
+  "support": "https://github.com/vanderheijden86/moneybird-mcp-server/issues",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "MONEYBIRD_API_TOKEN": "${user_config.api_token}",
+        "MONEYBIRD_ADMINISTRATION_ID": "${user_config.administration_id}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "moneybird_list",
+      "description": "List entities from Moneybird (contacts, sales_invoices, estimates, recurring_sales_invoices, products, projects, time_entries, financial_accounts, ledger_accounts). Supports filtering and pagination."
+    },
+    {
+      "name": "moneybird_get",
+      "description": "Get a single entity by ID from Moneybird (contact, sales_invoice, estimate, product, project, time_entry, etc.)."
+    },
+    {
+      "name": "moneybird_request",
+      "description": "Make a custom Moneybird API request with any HTTP method (GET, POST, PUT, DELETE) to any Moneybird endpoint."
+    }
+  ],
+  "tools_generated": false,
+  "keywords": [
+    "moneybird",
+    "accounting",
+    "invoices",
+    "contacts",
+    "finance",
+    "bookkeeping",
+    "mcp"
+  ],
+  "license": "MIT",
+  "user_config": {
+    "api_token": {
+      "type": "string",
+      "title": "Moneybird API Token",
+      "description": "Your Moneybird API token. Generate one at https://moneybird.com/user/applications",
+      "sensitive": true,
+      "required": true
+    },
+    "administration_id": {
+      "type": "string",
+      "title": "Moneybird Administration ID",
+      "description": "Your Moneybird administration ID. Found in the URL when logged in: https://moneybird.com/[YOUR_ADMINISTRATION_ID]/",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "privacy_policies": []
+}

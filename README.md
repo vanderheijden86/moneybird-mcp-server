@@ -2,177 +2,98 @@
 
 # Moneybird MCP Server
 
-A Model Context Protocol (MCP) server that connects AI assistants like Claude to Moneybird accounting software via API.
+A Model Context Protocol (MCP) server that connects AI assistants like Claude to [Moneybird](https://www.moneybird.com/) accounting software.
 
 <a href="https://glama.ai/mcp/servers/@vanderheijden86/moneybird-mcp-server">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@vanderheijden86/moneybird-mcp-server/badge" alt="Moneybird Server MCP server" />
 </a>
 
+## Quick Start (Claude Desktop)
+
+### Option 1: One-Click Install (.mcpb)
+
+Download the latest `moneybird-mcp-server.mcpb` from [Releases](https://github.com/vanderheijden86/moneybird-mcp-server/releases) and double-click it. Claude Desktop will prompt you for your API token and administration ID — that's it.
+
+### Option 2: npx
+
+Add this to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "moneybird": {
+      "command": "npx",
+      "args": ["-y", "moneybird-mcp-server"],
+      "env": {
+        "MONEYBIRD_API_TOKEN": "your_api_token_here",
+        "MONEYBIRD_ADMINISTRATION_ID": "your_administration_id_here"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+### Getting Your Credentials
+
+1. **API Token**: Generate one at https://moneybird.com/user/applications
+2. **Administration ID**: Found in the URL when logged in to Moneybird: `https://moneybird.com/<YOUR_ID>/`
+
 ## Features
 
-- **Contact Management**: List, retrieve, filter, create, and update contacts
-    - Advanced filtering by creation date, update date, name, and more
-- **Financial Data**: Access sales invoices, financial accounts, and payments
-- **Business Operations**: Manage products, projects, and time entries
-- **Custom Requests**: Make custom API requests to Moneybird endpoints
-- **Interactive Assistant**: Preconfigured prompt for a Moneybird assistant
-
-## New Developments
-
-- **Enhanced Contact Filtering**: Filter contacts using Moneybird's advanced query syntax
-    - Filter by creation date: `created_after:2023-01-01 00:00:00 UTC`
-    - Filter by update date: `updated_after:2023-01-01 10:45:35 UTC`
-    - Filter by properties: `first_name:value`, etc.
-- **Improved Error Handling**: Better error messages and recovery
-- **Performance Optimizations**: Response chunking for large datasets
-- **TypeScript Integration**: Full type safety with Zod schema validation
-
-## Setup Instructions
-
-### Basic Setup
-
-1. **Install the package**:
-   ```bash
-   npm install -g moneybird-mcp-server
-   ```
-
-2. **Create a .env file** with your Moneybird credentials:
-   ```
-   MONEYBIRD_API_TOKEN=your_api_token
-   MONEYBIRD_ADMINISTRATION_ID=your_administration_id
-   ```
-
-3. **Run the server**:
-   ```bash
-   npx moneybird-mcp-server
-   ```
-
-### Claude Desktop Setup
-
-To set up this MCP server in Claude Desktop:
-
-1. **Install the package globally** if you haven't already:
-   ```bash
-   npm install -g moneybird-mcp-server
-   ```
-
-2. **Create or edit** the Claude Desktop configuration file (usually in `~/Library/Application 
-Support/Claude/claude_desktop_config.json`) to include the MCP server configuration:
-   ```json
-   {
-     "mcpServers": {
-       "moneybird": {
-         "command": "npx",
-         "args": [
-           "-y",
-           "moneybird-mcp-server"
-         ],
-         "env": {
-           "MONEYBIRD_API_TOKEN": "your_api_token_here",
-           "MONEYBIRD_ADMINISTRATION_ID": "your_administration_id_here"
-         }
-       }
-     }
-   }
-   ```
-
-3. **Restart Claude Desktop** to apply the changes
-
-4. **Connect to the MCP server** by typing `/mcp moneybird` in the Claude chat input
-
-## Usage Examples
-
-### Basic Contact Listing
-
-## Overview
-
-This server allows AI assistants to interact with your Moneybird accounting data using the Model Context Protocol. It
-provides various tools to:
-
-- List and retrieve contacts
-- View sales invoices
-- Check financial accounts
-- Access products and projects
-- View time entries
-- Make custom Moneybird API requests
-
-## Prerequisites
-
-- Node.js (v18 or higher recommended)
-- A Moneybird account with API access
-- A Moneybird API token
-
-## Setup
-
-1. Clone this repository:
-   ```
-   git clone https://github.com/vanderheijden86/moneybird-mcp-server.git
-   cd moneybird-mcp-server
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Create `.env` file from the example:
-   ```
-   cp .env.example .env
-   ```
-
-4. Edit the `.env` file with your Moneybird API credentials:
-    - `MONEYBIRD_API_TOKEN`: Your Moneybird API token (generate at https://moneybird.com/user/applications)
-    - `MONEYBIRD_ADMINISTRATION_ID`: Your Moneybird administration ID (found in URL when logged in)
-    - `MCP_SERVER_PORT`: The port to run the MCP server on (default: 3000)
-
-## Running the Server
-
-For development:
-
-```
-npm run dev
-```
-
-For production:
-
-```
-npm run build
-npm start
-```
-
-## Using with AI Assistants
-
-This MCP server is compatible with any AI assistant that supports the Model Context Protocol. Once running, you can
-connect it to your AI assistant by providing the server URL:
-
-```
-http://your-server-address:3000
-```
+- **Contact Management** — List, retrieve, filter, create, and update contacts with advanced filtering (by creation date, update date, name, etc.)
+- **Financial Data** — Access sales invoices, estimates, recurring invoices, financial accounts, and ledger accounts
+- **Business Operations** — Manage products, projects, and time entries
+- **Custom API Requests** — Make any GET/POST/PUT/DELETE request to the Moneybird API
 
 ## Available Tools
 
-The server provides the following tools:
+| Tool | Description |
+|------|-------------|
+| `moneybird_list` | List entities with filtering and pagination. Supports: contacts, sales_invoices, estimates, recurring_sales_invoices, products, projects, time_entries, financial_accounts, ledger_accounts |
+| `moneybird_get` | Get a single entity by ID (contact, sales_invoice, estimate, product, project, time_entry, ledger_account) |
+| `moneybird_request` | Make a custom API request to any Moneybird endpoint. See [Moneybird API docs](https://developer.moneybird.com) |
 
-- `list_contacts`: List all contacts in Moneybird
-- `get_contact`: Get details for a specific contact by ID
-- `list_sales_invoices`: List all sales invoices
-- `get_sales_invoice`: Get details for a specific sales invoice by ID
-- `list_financial_accounts`: List all financial accounts
-- `list_products`: List all products
-- `list_projects`: List all projects
-- `list_time_entries`: List all time entries
-- `moneybird_request`: Make a custom request to the Moneybird API
+## Development
+
+### Prerequisites
+
+- Node.js v18+
+- A Moneybird account with API access
+
+### Setup
+
+```bash
+git clone https://github.com/vanderheijden86/moneybird-mcp-server.git
+cd moneybird-mcp-server
+npm install
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+### Run
+
+```bash
+npm run dev          # development (with auto-reload)
+npm run build        # compile TypeScript
+npm start            # production
+```
+
+### Building the .mcpb Bundle
+
+```bash
+npm run build
+# Package dist/ + node_modules (prod) + manifest.json into a ZIP with .mcpb extension
+```
 
 ## Security
 
-This server should be deployed with appropriate security measures, as it provides access to your Moneybird data.
-Consider:
-
-- Running behind a secure proxy
-- Implementing authentication for the MCP server
-- Using HTTPS
-- Restricting network access
+- API tokens are passed via `Authorization: Bearer` header, never in URLs
+- The `.mcpb` bundle stores tokens in the OS keychain (marked `sensitive` in manifest)
+- The server uses stdio transport — no network ports are opened
+- All requests go directly to `https://moneybird.com/api/v2` (hardcoded base URL)
 
 ## License
 
-MIT 
+MIT

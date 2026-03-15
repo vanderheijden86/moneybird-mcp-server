@@ -1,6 +1,7 @@
 # Build output
 /dist
 /build
+*.mcpb
 
 # Dependencies
 /node_modules
