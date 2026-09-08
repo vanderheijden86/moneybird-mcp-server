@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Run the version update
+npm run version:update
+
+# Stage the version file and package.json if they changed
+git add src/common/version.ts package.json

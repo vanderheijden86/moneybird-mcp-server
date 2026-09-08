@@ -1,0 +1,10 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_server_host": "127.0.0.1",
+  "dolt_server_port": 3306,
+  "dolt_server_user": "root",
+  "dolt_database": "moneybird_mcp_server",
+  "project_id": "6e327c17-7c9b-476a-bfb4-911163db4d14"
+}
