@@ -7,7 +7,8 @@ import {
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MoneybirdClient } from './services/moneybird.js';
 import dotenv from 'dotenv';
-import { isMoneybirdError, MoneybirdRateLimitError } from './common/errors.js';
+import { isMoneybirdError, MoneybirdRateLimitError, MoneybirdReadOnlyError } from './common/errors.js';
+import { parseReadOnly } from './common/config.js';
 import { VERSION } from './common/version.js';
 
 dotenv.config();
@@ -20,10 +21,26 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+let readOnly: boolean;
+try {
+  readOnly = parseReadOnly(process.env.MONEYBIRD_READ_ONLY);
+} catch (error: any) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 const moneybirdClient = new MoneybirdClient(
   process.env.MONEYBIRD_API_TOKEN!,
-  process.env.MONEYBIRD_ADMINISTRATION_ID!
+  process.env.MONEYBIRD_ADMINISTRATION_ID!,
+  {
+    baseURL: process.env.MONEYBIRD_API_BASE_URL || undefined,
+    readOnly,
+  }
 );
+
+const REQUEST_METHODS = ['get', 'post', 'put', 'delete'] as const;
+type RequestMethod = typeof REQUEST_METHODS[number];
+const ALLOWED_METHODS: readonly RequestMethod[] = readOnly ? ['get'] : REQUEST_METHODS;
 
 // Entity types and their API paths
 const LIST_ENTITIES: Record<string, { path: string; supportsPagination: boolean }> = {
@@ -59,6 +76,9 @@ const server = new Server({
 });
 
 function formatError(error: any): string {
+  if (error instanceof MoneybirdReadOnlyError) {
+    return error.message;
+  }
   if (error instanceof MoneybirdRateLimitError) {
     let msg = `Rate limit exceeded: ${error.message}`;
     if (error.resetAt) msg += ` (resets at ${error.resetAt.toISOString()})`;
@@ -112,17 +132,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "moneybird_request",
-        description: "Make a custom Moneybird API request. Common paths: contacts, sales_invoices, estimates, recurring_sales_invoices, documents/purchase_invoices, documents/receipts, financial_accounts, financial_mutations, ledger_accounts, products, projects, time_entries, tax_rates, subscriptions, webhooks. See https://developer.moneybird.com for full docs.",
+        description: (readOnly
+          ? "Read-only mode: only GET is allowed, writes are refused. "
+          : "DELETE requires confirm: true; ask the user before deleting. ")
+          + "Make a custom Moneybird API request. Common paths: contacts, sales_invoices, estimates, recurring_sales_invoices, documents/purchase_invoices, documents/receipts, financial_accounts, financial_mutations, ledger_accounts, products, projects, time_entries, tax_rates, subscriptions, webhooks. See https://developer.moneybird.com for full docs.",
         inputSchema: {
           type: "object",
           properties: {
             method: {
               type: "string",
-              enum: ["get", "post", "put", "delete"],
+              enum: [...ALLOWED_METHODS],
               description: "HTTP method"
             },
             path: { type: "string", description: "API path (e.g. contacts, sales_invoices/{id}/send_invoice)" },
-            data: { description: "Request body for POST/PUT" }
+            data: { description: "Request body for POST/PUT" },
+            ...(readOnly ? {} : {
+              confirm: {
+                type: "boolean",
+                description: "Must be true for DELETE. Set it only after the user has approved this deletion."
+              }
+            }),
           },
           required: ["method", "path"],
         }
@@ -177,11 +206,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "moneybird_request": {
-        const { method, path, data } = args as {
-          method: 'get' | 'post' | 'put' | 'delete';
+        const { method: rawMethod, path, data, confirm } = args as {
+          method: string;
           path: string;
           data?: any;
+          confirm?: unknown;
         };
+        const method = String(rawMethod).toLowerCase() as RequestMethod;
+        if (readOnly && method !== 'get') {
+          return { content: [{ type: "text", text: new MoneybirdReadOnlyError(method, path).message }], isError: true };
+        }
+        if (!REQUEST_METHODS.includes(method)) {
+          return { content: [{ type: "text", text: `Unsupported method: ${rawMethod}. Use one of: ${ALLOWED_METHODS.join(', ')}` }], isError: true };
+        }
+        // Only the boolean true counts: a model that sends "true" or 1 has not
+        // used the field as documented, and a deletion cannot be undone.
+        if (method === 'delete' && confirm !== true) {
+          return { content: [{ type: "text", text: `Refused DELETE ${path}: deletions need confirm: true. Ask the user to approve this deletion, then repeat the call with confirm: true.` }], isError: true };
+        }
         let processedData = data;
         if (typeof data === 'string') {
           try { processedData = JSON.parse(data); } catch { /* keep as-is */ }

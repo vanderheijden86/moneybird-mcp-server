@@ -1,4 +1,5 @@
 import { MoneybirdClient } from './moneybird.js';
+import { parseReadOnly } from '../common/config.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -19,7 +20,10 @@ export function getClient(): MoneybirdClient {
       throw new Error('MONEYBIRD_ADMINISTRATION_ID environment variable is required');
     }
 
-    clientInstance = new MoneybirdClient(apiToken, administrationId);
+    clientInstance = new MoneybirdClient(apiToken, administrationId, {
+      baseURL: process.env.MONEYBIRD_API_BASE_URL || undefined,
+      readOnly: parseReadOnly(process.env.MONEYBIRD_READ_ONLY),
+    });
   }
   
   return clientInstance;

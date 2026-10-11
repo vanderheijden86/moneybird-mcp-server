@@ -140,6 +140,12 @@ npm run build
 npm start
 ```
 
+To run the tests (they build first, then drive `dist/index.js` over stdio against a local stand-in for the Moneybird API, so no real token is needed):
+
+```
+npm test
+```
+
 ## Using with AI Assistants
 
 This MCP server is compatible with any AI assistant that supports the Model Context Protocol. Once running, you can
@@ -163,7 +169,30 @@ The server provides the following tools:
 - `list_time_entries`: List all time entries
 - `moneybird_request`: Make a custom request to the Moneybird API
 
+## Read-only mode and the deletion guard
+
+Set `MONEYBIRD_READ_ONLY=true` to let an assistant read your administration without changing it:
+
+```json
+"env": {
+  "MONEYBIRD_API_TOKEN": "your_api_token_here",
+  "MONEYBIRD_ADMINISTRATION_ID": "your_administration_id_here",
+  "MONEYBIRD_READ_ONLY": "true"
+}
+```
+
+In read-only mode:
+
+- `moneybird_request` advertises only `get` and refuses `post`, `put` and `delete` before anything is sent to Moneybird.
+- `moneybird_list` and `moneybird_get` work as usual.
+- Accepted values are `true`, `1`, `yes`, `on` (read-only) and `false`, `0`, `no`, `off` or unset (read-write). Any other value stops the server at startup, so a typo never falls back to read-write.
+
+Read-only mode limits what this server sends. For a hard guarantee, also give the server an API token that has only read scopes.
+
+Outside read-only mode, a `delete` through `moneybird_request` also needs `"confirm": true` (the boolean, not a string). Without it the server refuses the call and asks the assistant to get your approval first.
+
 ## Security
+
 
 This server should be deployed with appropriate security measures, as it provides access to your Moneybird data.
 Consider:

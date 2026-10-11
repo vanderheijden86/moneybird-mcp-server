@@ -1,13 +1,27 @@
 import axios, { AxiosInstance } from 'axios';
+import { MoneybirdReadOnlyError } from '../common/errors.js';
+
+export const DEFAULT_BASE_URL = 'https://moneybird.com/api/v2';
+
+export interface MoneybirdClientOptions {
+  timeout?: number;
+  baseURL?: string;
+  // Every request passes through request(), so enforcing read-only there
+  // covers the generic tool and any helper method alike.
+  readOnly?: boolean;
+}
 
 export class MoneybirdClient {
   private client: AxiosInstance;
   private administrationId: string;
+  readonly readOnly: boolean;
 
-  constructor(apiToken: string, administrationId: string, timeout = 30000) {
+  constructor(apiToken: string, administrationId: string, options: MoneybirdClientOptions = {}) {
+    const { timeout = 30000, baseURL = DEFAULT_BASE_URL, readOnly = false } = options;
     this.administrationId = administrationId;
+    this.readOnly = readOnly;
     this.client = axios.create({
-      baseURL: 'https://moneybird.com/api/v2',
+      baseURL,
       headers: {
         'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
@@ -58,7 +72,11 @@ export class MoneybirdClient {
   async request(method: 'get' | 'post' | 'put' | 'delete', path: string, data?: any, retries = 2): Promise<any> {
     // Remove leading slash if present to avoid double slashes
     const normalizedPath = path.startsWith('/') ? path.substring(1) : path;
-    
+
+    if (this.readOnly && String(method).toLowerCase() !== 'get') {
+      throw new MoneybirdReadOnlyError(method, normalizedPath);
+    }
+
     try {
       console.error(`Attempting ${method.toUpperCase()} request to ${normalizedPath}`);
       const response = await this.client.request({

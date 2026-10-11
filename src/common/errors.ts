@@ -56,3 +56,10 @@ export class MoneybirdConflictError extends MoneybirdError {
 export function isMoneybirdError(error: any): error is MoneybirdError {
   return error instanceof MoneybirdError;
 } 
+// Raised before any network call, so a refused write never reaches Moneybird.
+export class MoneybirdReadOnlyError extends MoneybirdError {
+  constructor(method: string, path: string) {
+    super(`Refused ${method.toUpperCase()} ${path}: the server runs in read-only mode (MONEYBIRD_READ_ONLY). Only GET requests are allowed.`);
+    this.name = 'MoneybirdReadOnlyError';
+  }
+}
