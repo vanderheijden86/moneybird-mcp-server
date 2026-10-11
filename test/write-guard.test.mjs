@@ -5,6 +5,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -131,6 +132,11 @@ describe('DELETE confirmation (read-write mode)', { timeout: 30_000 }, () => {
   after(async () => {
     await client?.close();
     api?.server.close();
+  });
+
+  test('reports the version from package.json', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(path.dirname(SERVER), '../package.json'), 'utf8'));
+    assert.equal(client.getServerVersion().version, `v${pkg.version}`);
   });
 
   test('advertises all methods and the confirm field', async () => {

@@ -146,6 +146,16 @@ To run the tests (they build first, then drive `dist/index.js` over stdio agains
 npm test
 ```
 
+## Releasing
+
+Commits never change the version or create tags. To release, bump the version in `package.json` with `npm version`, which commits the change and creates the `vX.Y.Z` tag, then push the tag and publish:
+
+```
+npm version patch   # or minor, major
+git push --follow-tags
+npm run publish-npm
+```
+
 ## Using with AI Assistants
 
 This MCP server is compatible with any AI assistant that supports the Model Context Protocol. Once running, you can

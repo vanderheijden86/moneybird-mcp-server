@@ -1,10 +1,4 @@
 #!/usr/bin/env sh
-# Run the version update
-npm run version:update
-
-# Stage the version file and package.json if they changed
-git add src/common/version.ts package.json
-
 # --- BEGIN BEADS INTEGRATION v1.3.0-rc.1 ---
 # This section is managed by beads. Do not remove these markers.
 if command -v bd >/dev/null 2>&1; then

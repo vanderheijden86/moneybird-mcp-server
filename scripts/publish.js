@@ -3,50 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-// Get the current version from version.ts
 function getCurrentVersion() {
-  try {
-    const versionFilePath = path.resolve('src/common/version.ts');
-    const versionFile = fs.readFileSync(versionFilePath, 'utf8');
-    
-    const majorMatch = versionFile.match(/major:\s*(\d+)/);
-    const minorMatch = versionFile.match(/minor:\s*(\d+)/);
-    const patchMatch = versionFile.match(/patch:\s*(\d+)/);
-    
-    return {
-      major: parseInt(majorMatch?.[1] || '1', 10),
-      minor: parseInt(minorMatch?.[1] || '0', 10),
-      patch: parseInt(patchMatch?.[1] || '0', 10)
-    };
-  } catch (error) {
-    console.error('Error reading version file:', error);
-    return { major: 1, minor: 0, patch: 0 };
-  }
-}
-
-// Update package.json version to match version.ts
-function syncPackageVersion() {
-  try {
-    const version = getCurrentVersion();
-    const versionStr = `${version.major}.${version.minor}.${version.patch}`;
-    
-    // Update package.json
-    const packagePath = path.resolve('package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-    
-    if (packageJson.version !== versionStr) {
-      packageJson.version = versionStr;
-      fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n');
-      console.log(`Updated package.json version to ${versionStr}`);
-      return true;
-    } else {
-      console.log(`Package.json version already at ${versionStr}`);
-      return false;
-    }
-  } catch (error) {
-    console.error('Error updating package.json version:', error);
-    return false;
-  }
+  return JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8')).version;
 }
 
 // Build the package
@@ -64,9 +22,8 @@ function buildPackage() {
 // Publish to npm
 function publishToNpm() {
   try {
-    const version = getCurrentVersion();
-    const versionStr = `${version.major}.${version.minor}.${version.patch}`;
-    
+    const versionStr = getCurrentVersion();
+
     console.log(`Publishing version ${versionStr} to npm...`);
     
     // Check if user is logged in to npm
@@ -94,9 +51,6 @@ function main() {
   const dryRun = args.includes('--dry-run');
   
   console.log(`Starting npm publish process${dryRun ? ' (dry run)' : ''}...`);
-  
-  // Sync package.json version with version.ts
-  const versionChanged = syncPackageVersion();
   
   // Always build the package to ensure it's up to date
   if (!buildPackage()) {

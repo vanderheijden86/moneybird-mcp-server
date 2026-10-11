@@ -1,15 +1,13 @@
-/**
- * Semantic versioning for the Moneybird MCP Server
- * Standard semver rules:
- * - fix: increment patch version (backwards-compatible bug fixes)
- * - feat: increment minor version (backwards-compatible features)
- * - major: manual upgrade only (breaking changes)
- */
+import { createRequire } from 'node:module';
+
+// package.json is the single source of the version: `npm version` bumps it and
+// creates the release tag. The relative path holds from both src/common and
+// dist/common, and npm always ships package.json with the package.
+const pkg = createRequire(import.meta.url)('../../package.json') as { version: string };
+
 export const VERSION = {
-  major: 0,
-  minor: 8,
-  patch: 0,
-  toString: function() {
-    return `${this.major}.${this.minor}.${this.patch}`;
-  }
+  value: pkg.version,
+  toString(): string {
+    return this.value;
+  },
 };

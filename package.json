@@ -13,10 +13,6 @@
     "start": "node dist/index.js",
     "dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
     "start:ts": "node --loader ts-node/esm src/index.ts",
-    "prepare": "husky install",
-    "version:update": "node scripts/update-version.js",
-    "version:major": "node scripts/major-version.js",
-    "precommit": "npm run version:update",
     "publish-npm": "node scripts/publish.js",
     "publish-dry-run": "node scripts/publish.js --dry-run"
   },
@@ -30,7 +26,6 @@
   "devDependencies": {
     "@types/dotenv": "^8.2.0",
     "@types/node": "^22.13.11",
-    "husky": "^9.1.7",
     "nodemon": "^3.1.9",
     "shx": "^0.3.4",
     "ts-node": "^10.9.2",
